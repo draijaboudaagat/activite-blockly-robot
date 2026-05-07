@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Robot Programmeur — Activité Blockly</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f8; min-height: 100vh; padding: 20px; }
+  #app { max-width: 900px; margin: 0 auto; }
+
+  .header { display: flex; align-items: center; gap: 14px; margin-bottom: 1.2rem; background: white; padding: 16px 20px; border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .logo { width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, #4A90D9, #2C6FAC); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: 700; flex-shrink: 0; }
+  .title-area h1 { font-size: 20px; font-weight: 600; color: #1a2a3a; }
+  .title-area p { font-size: 13px; color: #6b7a8a; margin-top: 2px; }
+
+  .level-tabs { display: flex; gap: 8px; margin-bottom: 1rem; }
+  .tab { padding: 8px 20px; border-radius: 25px; border: 2px solid #d0dae6; font-size: 13px; font-weight: 500; cursor: pointer; background: white; color: #5a6a7a; transition: all 0.2s; }
+  .tab:hover { border-color: #4A90D9; color: #4A90D9; }
+  .tab.active { background: #4A90D9; color: white; border-color: #4A90D9; box-shadow: 0 2px 8px rgba(74,144,217,0.35); }
+  .tab.done { border-color: #27AE60; color: #27AE60; background: #eafaf1; }
+  .tab.done.active { background: #27AE60; color: white; border-color: #27AE60; box-shadow: 0 2px 8px rgba(39,174,96,0.35); }
+
+  .score-area { display: flex; gap: 12px; margin-bottom: 1rem; }
+  .score-badge { background: white; border-radius: 10px; padding: 6px 16px; font-size: 13px; color: #6b7a8a; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+  .score-badge span { font-weight: 600; color: #1a2a3a; }
+
+  .main-area { display: grid; grid-template-columns: 270px 1fr; gap: 14px; }
+
+  .panel { background: white; border-radius: 14px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+  .panel-title { font-size: 11px; font-weight: 600; color: #8a9aaa; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; }
+
+  .instruction-box { background: #f0f6ff; border: 1.5px solid #d0e4f7; border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; font-size: 13px; color: #2a3a4a; line-height: 1.65; }
+  .instruction-box strong { color: #4A90D9; }
+
+  .block-palette { display: flex; flex-direction: column; gap: 7px; }
+  .block { padding: 9px 14px; border-radius: 9px; font-size: 12px; font-weight: 600; cursor: grab; user-select: none; transition: transform 0.1s, box-shadow 0.15s; display: flex; align-items: center; gap: 8px; }
+  .block:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(0,0,0,0.15); }
+  .block:active { cursor: grabbing; transform: scale(0.97); }
+  .block.motion { background: linear-gradient(135deg, #4A90D9, #3478c5); color: white; }
+  .block.control { background: linear-gradient(135deg, #F5A623, #e09515); color: white; }
+  .block.looks { background: linear-gradient(135deg, #9B59B6, #8344a0); color: white; }
+  .block.operator { background: linear-gradient(135deg, #27AE60, #1e9651); color: white; }
+  .block-icon { font-size: 15px; }
+
+  .stage-area { display: flex; flex-direction: column; gap: 14px; }
+  .workspace { min-height: 200px; border: 2.5px dashed #c0d0e0; border-radius: 12px; padding: 12px; position: relative; transition: border-color 0.2s, background 0.2s; }
+  .workspace.drag-over { border-color: #4A90D9; background: rgba(74,144,217,0.05); }
+  .workspace-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #a0b0c0; font-size: 13px; pointer-events: none; opacity: 1; transition: opacity 0.3s; width: 90%; }
+  .workspace-label.hidden { opacity: 0; }
+
+  .dropped-block { padding: 9px 14px; border-radius: 9px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: 7px; position: relative; animation: dropIn 0.2s ease; }
+  .dropped-block .remove-btn { margin-left: auto; cursor: pointer; opacity: 0.5; font-size: 13px; border: none; background: none; color: inherit; padding: 0 4px; line-height: 1; border-radius: 4px; }
+  .dropped-block .remove-btn:hover { opacity: 1; background: rgba(0,0,0,0.12); }
+  @keyframes dropIn { from { transform: translateY(-8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  .btn-row { display: flex; gap: 8px; margin-top: 12px; }
+  .btn { padding: 9px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; border: 2px solid #d0dae6; background: white; color: #5a6a7a; transition: all 0.15s; }
+  .btn:hover { border-color: #b0bfcc; background: #f5f8fa; }
+  .btn:active { transform: scale(0.98); }
+  .btn.primary { background: linear-gradient(135deg, #4A90D9, #3478c5); color: white; border-color: transparent; box-shadow: 0 2px 8px rgba(74,144,217,0.4); }
+  .btn.primary:hover { background: linear-gradient(135deg, #3478c5, #2868b5); }
+  .btn.danger { color: #a0b0c0; border-color: transparent; background: none; }
+  .btn.danger:hover { color: #e05555; background: #fff0f0; }
+
+  .stage-grid { display: inline-grid; gap: 3px; }
+  .cell { width: 42px; height: 42px; border-radius: 6px; background: #f5f8fc; border: 1.5px solid #dde8f0; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: background 0.2s; }
+  .cell.robot-here { background: #d5eaf8; border-color: #4A90D9; }
+  .cell.target { background: #eafaf1; border-color: #27AE60; }
+  .cell.obstacle { background: #fff0f0; border-color: #e05555; }
+
+  .banner { border-radius: 10px; padding: 12px 16px; font-size: 13px; display: none; align-items: center; gap: 10px; margin-top: 12px; font-weight: 500; }
+  .banner.show { display: flex; }
+  .success-banner { background: #eafaf1; border: 1.5px solid #a9dfbf; color: #1e8449; }
+  .fail-banner { background: #fdf2f2; border: 1.5px solid #f1948a; color: #c0392b; }
+  .stars { font-size: 20px; letter-spacing: 2px; }
+
+  .hint-toggle { font-size: 12px; color: #4A90D9; cursor: pointer; text-decoration: underline; margin-top: 8px; display: inline-block; }
+  .hint-box { background: #fffde7; border: 1.5px solid #f9e08a; border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #7a6a20; margin-top: 8px; display: none; }
+  .hint-box.show { display: block; }
+
+  @media (max-width: 650px) {
+    .main-area { grid-template-columns: 1fr; }
+    .level-tabs { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="logo">🤖</div>
+    <div class="title-area">
+      <h1>Robot Programmeur — Activité Blockly</h1>
+      <p>Apprends à programmer en guidant le robot jusqu'à l'étoile ⭐</p>
+    </div>
+  </div>
+
+  <div class="level-tabs">
+    <button class="tab active" id="tab-1" onclick="switchLevel(1)">🟢 Niveau 1 — Séquences</button>
+    <button class="tab" id="tab-2" onclick="switchLevel(2)">🟡 Niveau 2 — Boucles</button>
+    <button class="tab" id="tab-3" onclick="switchLevel(3)">🔴 Niveau 3 — Conditions</button>
+  </div>
+
+  <div class="score-area">
+    <div class="score-badge">⭐ Score : <span id="score-val">0</span> pts</div>
+    <div class="score-badge">✅ Niveaux complétés : <span id="done-val">0</span> / 3</div>
+  </div>
+
+  <div class="main-area">
+    <div class="panel">
+      <div class="panel-title">📦 Blocs disponibles</div>
+      <div class="instruction-box" id="instruction"></div>
+      <span class="hint-toggle" onclick="toggleHint()">💡 Voir l'astuce</span>
+      <div class="hint-box" id="hint-box"></div>
+      <br><br>
+      <div class="block-palette" id="palette"></div>
+    </div>
+
+    <div class="stage-area">
+      <div class="panel">
+        <div class="panel-title">🎬 Scène — Robot &amp; Cible</div>
+        <div id="stage"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">🧩 Mon programme (glisse les blocs ici)</div>
+        <div class="workspace" id="workspace" ondragover="onDragOver(event)" ondrop="onDrop(event)" ondragleave="onDragLeave(event)">
+          <div class="workspace-label" id="ws-label">➡ Glisse des blocs ici pour construire ton programme</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" onclick="runProgram()">▶ Exécuter le programme</button>
+          <button class="btn danger" onclick="clearWorkspace()">✕ Tout effacer</button>
+        </div>
+        <div id="success" class="banner success-banner">
+          <span class="stars" id="stars-out"></span>
+          <span id="success-msg"></span>
+        </div>
+        <div id="fail" class="banner fail-banner">
+          <span>❌</span>
+          <span id="fail-msg"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const levels = [
+  {
+    id: 1,
+    instruction: "<strong>🎯 Consigne élève :</strong> Le robot 🤖 se trouve à gauche. Ton but est de le faire avancer jusqu'à l'étoile ⭐ à droite. Utilise les blocs <em>Avancer →</em> et place-les dans le bon ordre dans ton programme !",
+    hint: "Tu as besoin de 4 blocs 'Avancer →' pour traverser les 4 cases.",
+    grid: 5,
+    robotStart: [2, 0],
+    target: [2, 4],
+    obstacles: [],
+    availableBlocks: [
+      { id: "avancer", label: "Avancer →", type: "motion", icon: "→", dr: 0, dc: 1 },
+      { id: "haut", label: "Monter ↑", type: "motion", icon: "↑", dr: -1, dc: 0 },
+      { id: "bas", label: "Descendre ↓", type: "motion", icon: "↓", dr: 1, dc: 0 },
+    ],
+    solution: ["avancer","avancer","avancer","avancer"],
+    stars: 3
+  },
+  {
+    id: 2,
+    instruction: "<strong>🎯 Consigne élève :</strong> Le robot doit descendre de 3 cases puis avancer de 2 cases pour atteindre l'étoile. Utilise les blocs <em>Répéter</em> pour éviter de répéter les mêmes blocs plusieurs fois — c'est plus efficace !",
+    hint: "Utilise 'Répéter 3 × ↓' pour descendre, puis 'Répéter 2 × →' pour avancer.",
+    grid: 5,
+    robotStart: [0, 0],
+    target: [3, 2],
+    obstacles: [],
+    availableBlocks: [
+      { id: "avancer", label: "Avancer →", type: "motion", icon: "→", dr: 0, dc: 1 },
+      { id: "bas", label: "Descendre ↓", type: "motion", icon: "↓", dr: 1, dc: 0 },
+      { id: "haut", label: "Monter ↑", type: "motion", icon: "↑", dr: -1, dc: 0 },
+      { id: "repeter3_bas", label: "Répéter 3× ↓", type: "control", icon: "↻↓", multiDr: 1, multiDc: 0, times: 3 },
+      { id: "repeter2_av", label: "Répéter 2× →", type: "control", icon: "↻→", multiDr: 0, multiDc: 1, times: 2 },
+    ],
+    solution: ["repeter3_bas","repeter2_av"],
+    stars: 3
+  },
+  {
+    id: 3,
+    instruction: "<strong>🎯 Consigne élève :</strong> Attention ! Un mur 🧱 bloque le chemin direct. Utilise le bloc <em>Si obstacle → contourner</em> pour programmer le robot à éviter le mur automatiquement. C'est une <strong>condition</strong> : le robot décide quoi faire selon ce qu'il voit !",
+    hint: "Descends 2 fois, puis utilise 'Si obstacle → contourner', puis continue vers l'étoile.",
+    grid: 6,
+    robotStart: [2, 0],
+    target: [2, 5],
+    obstacles: [[2,3]],
+    availableBlocks: [
+      { id: "avancer", label: "Avancer →", type: "motion", icon: "→", dr: 0, dc: 1 },
+      { id: "bas", label: "Descendre ↓", type: "motion", icon: "↓", dr: 1, dc: 0 },
+      { id: "haut", label: "Monter ↑", type: "motion", icon: "↑", dr: -1, dc: 0 },
+      { id: "si_obstacle", label: "Si obstacle → contourner", type: "control", icon: "🔀", special: "bypass" },
+    ],
+    solution: ["avancer","avancer","avancer","si_obstacle","avancer","avancer"],
+    stars: 3
+  }
+];
+
+let currentLevel = 0;
+let program = [];
+let score = 0;
+let doneLevels = new Set();
+let animating = false;
+let hintVisible = false;
+
+function toggleHint() {
+  hintVisible = !hintVisible;
+  document.getElementById('hint-box').classList.toggle('show', hintVisible);
+  document.querySelector('.hint-toggle').textContent = hintVisible ? '🙈 Cacher l\'astuce' : '💡 Voir l\'astuce';
+}
+
+function switchLevel(n) {
+  currentLevel = n - 1;
+  program = [];
+  animating = false;
+  hintVisible = false;
+  document.getElementById('hint-box').classList.remove('show');
+  document.querySelector('.hint-toggle').textContent = '💡 Voir l\'astuce';
+  document.getElementById('success').classList.remove('show');
+  document.getElementById('fail').classList.remove('show');
+  for(let i=1;i<=3;i++) {
+    const t = document.getElementById('tab-'+i);
+    t.className = 'tab' + (doneLevels.has(i-1) ? ' done' : '') + (i-1===currentLevel ? ' active' : '');
+  }
+  renderAll();
+}
+
+function renderAll() {
+  const lv = levels[currentLevel];
+  document.getElementById('instruction').innerHTML = lv.instruction;
+  document.getElementById('hint-box').textContent = '💡 ' + lv.hint;
+  renderPalette(lv);
+  renderStage(lv, lv.robotStart);
+  renderWorkspace();
+}
+
+function renderPalette(lv) {
+  const p = document.getElementById('palette');
+  p.innerHTML = '';
+  lv.availableBlocks.forEach(b => {
+    const el = document.createElement('div');
+    el.className = 'block ' + b.type;
+    el.draggable = true;
+    el.innerHTML = `<span class="block-icon">${b.icon}</span><span>${b.label}</span>`;
+    el.addEventListener('dragstart', e => e.dataTransfer.setData('blockId', b.id));
+    p.appendChild(el);
+  });
+}
+
+function renderStage(lv, rPos) {
+  const stage = document.getElementById('stage');
+  let html = `<div class="stage-grid" style="grid-template-columns: repeat(${lv.grid}, 42px);">`;
+  for(let r = 0; r < lv.grid; r++) {
+    for(let c = 0; c < lv.grid; c++) {
+      const isRobot = rPos[0]===r && rPos[1]===c;
+      const isTarget = lv.target[0]===r && lv.target[1]===c;
+      const isObs = lv.obstacles.some(o=>o[0]===r&&o[1]===c);
+      let cls = 'cell';
+      if(isRobot) cls += ' robot-here';
+      if(isTarget && !isRobot) cls += ' target';
+      if(isObs) cls += ' obstacle';
+      let content = isObs ? '🧱' : (isRobot ? (isTarget ? '🤖⭐' : '🤖') : (isTarget ? '⭐' : ''));
+      html += `<div class="${cls}">${content}</div>`;
+    }
+  }
+  html += '</div>';
+  stage.innerHTML = html;
+}
+
+function onDragOver(e) { e.preventDefault(); document.getElementById('workspace').classList.add('drag-over'); }
+function onDragLeave(e) { document.getElementById('workspace').classList.remove('drag-over'); }
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('workspace').classList.remove('drag-over');
+  const id = e.dataTransfer.getData('blockId');
+  if(id) { program.push(id); renderWorkspace(); }
+}
+
+function renderWorkspace() {
+  const ws = document.getElementById('workspace');
+  ws.querySelectorAll('.dropped-block').forEach(x => x.remove());
+  document.getElementById('ws-label').classList.toggle('hidden', program.length > 0);
+  const lv = levels[currentLevel];
+  program.forEach((pid, idx) => {
+    const b = lv.availableBlocks.find(x => x.id === pid);
+    if(!b) return;
+    const el = document.createElement('div');
+    el.className = 'dropped-block ' + b.type;
+    el.innerHTML = `<span>${b.icon}</span><span>${b.label}</span><button class="remove-btn" onclick="removeBlock(${idx})">✕</button>`;
+    ws.appendChild(el);
+  });
+}
+
+function removeBlock(idx) { program.splice(idx,1); renderWorkspace(); }
+function clearWorkspace() {
+  program = [];
+  renderWorkspace();
+  document.getElementById('success').classList.remove('show');
+  document.getElementById('fail').classList.remove('show');
+  renderStage(levels[currentLevel], levels[currentLevel].robotStart);
+}
+
+async function runProgram() {
+  if(animating || program.length === 0) return;
+  animating = true;
+  const lv = levels[currentLevel];
+  document.getElementById('success').classList.remove('show');
+  document.getElementById('fail').classList.remove('show');
+  let pos = [...lv.robotStart];
+  renderStage(lv, pos);
+
+  const moves = [];
+  for(const pid of program) {
+    const b = lv.availableBlocks.find(x => x.id === pid);
+    if(!b) continue;
+    if(b.times) {
+      for(let i=0;i<b.times;i++) moves.push([b.multiDr, b.multiDc]);
+    } else if(b.special === 'bypass') {
+      const nextC = pos[1]+1;
+      const blocked = lv.obstacles.some(o=>o[0]===pos[0]&&o[1]===nextC);
+      if(blocked) { moves.push([-1,0],[0,1],[1,0]); }
+      else { moves.push([0,1]); }
+    } else {
+      moves.push([b.dr, b.dc]);
+    }
+  }
+
+  for(const [dr,dc] of moves) {
+    await sleep(300);
+    const nr = pos[0]+dr, nc = pos[1]+dc;
+    const inBounds = nr>=0 && nr<lv.grid && nc>=0 && nc<lv.grid;
+    const blocked = lv.obstacles.some(o=>o[0]===nr&&o[1]===nc);
+    if(inBounds && !blocked) pos = [nr,nc];
+    renderStage(lv, pos);
+  }
+
+  await sleep(400);
+  animating = false;
+  const reached = pos[0]===lv.target[0] && pos[1]===lv.target[1];
+  if(reached) {
+    document.getElementById('stars-out').textContent = '⭐'.repeat(lv.stars);
+    document.getElementById('success-msg').textContent = `Bravo ! Tu as guidé le robot jusqu'à l'étoile ! +${lv.stars*10} points`;
+    document.getElementById('success').classList.add('show');
+    if(!doneLevels.has(currentLevel)) {
+      score += lv.stars * 10;
+      doneLevels.add(currentLevel);
+      document.getElementById('score-val').textContent = score;
+      document.getElementById('done-val').textContent = doneLevels.size;
+      document.getElementById('tab-'+(currentLevel+1)).classList.add('done');
+      if(doneLevels.size===3) {
+        setTimeout(()=>{ document.getElementById('success-msg').textContent += ' 🎉 Félicitations ! Tu as terminé tous les niveaux !'; }, 500);
+      }
+    }
+  } else {
+    document.getElementById('fail-msg').textContent = `Le robot n'a pas atteint l'étoile. Essaie encore ! ${lv.hint}`;
+    document.getElementById('fail').classList.add('show');
+  }
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r,ms)); }
+switchLevel(1);
+</script>
+</body>
+</html>
